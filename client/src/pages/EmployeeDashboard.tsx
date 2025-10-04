@@ -1,20 +1,21 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { insertExpenseSchema, type Expense } from "@shared/schema";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Receipt } from "lucide-react";
+import { Plus, Receipt, Upload, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 
 const expenseFormSchema = insertExpenseSchema.extend({
@@ -25,7 +26,10 @@ type ExpenseFormData = z.infer<typeof expenseFormSchema>;
 
 export default function EmployeeDashboard() {
   const [showAddExpense, setShowAddExpense] = useState(false);
+  const [isProcessingOCR, setIsProcessingOCR] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { token } = useAuth();
 
   const { data: expenses = [], isLoading } = useQuery<Expense[]>({
     queryKey: ["/api/expenses/my"],
@@ -71,6 +75,70 @@ export default function EmployeeDashboard() {
     createExpenseMutation.mutate(data);
   };
 
+  const handleReceiptUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file",
+        description: "Please upload an image file (JPG, PNG, etc.)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsProcessingOCR(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('receipt', file);
+
+      const response = await fetch('/api/ocr/receipt', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'OCR processing failed');
+      }
+
+      const result = await response.json();
+      const { parsed } = result;
+
+      if (parsed.amount) {
+        form.setValue('amount', parsed.amount);
+      }
+      if (parsed.date) {
+        form.setValue('date', parsed.date);
+      }
+      if (parsed.merchantName) {
+        form.setValue('description', `Receipt from ${parsed.merchantName}`);
+      }
+
+      toast({
+        title: "Receipt scanned",
+        description: "Form fields have been auto-filled from the receipt",
+      });
+    } catch (error) {
+      console.error('OCR error:', error);
+      toast({
+        title: "Scan failed",
+        description: error instanceof Error ? error.message : "Failed to process receipt",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingOCR(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive"> = {
       PENDING: "secondary",
@@ -109,9 +177,38 @@ export default function EmployeeDashboard() {
           <Card className="mb-6" data-testid="card-add-expense">
             <CardHeader>
               <CardTitle>Submit New Expense</CardTitle>
-              <CardDescription>Fill in the details of your expense claim</CardDescription>
+              <CardDescription>Fill in the details of your expense claim or scan a receipt</CardDescription>
             </CardHeader>
             <CardContent>
+              <div className="mb-4">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleReceiptUpload}
+                  accept="image/*"
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isProcessingOCR}
+                  className="w-full"
+                >
+                  {isProcessingOCR ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing receipt...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Scan Receipt (Auto-fill)
+                    </>
+                  )}
+                </Button>
+              </div>
+
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
