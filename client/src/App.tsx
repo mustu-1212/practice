@@ -7,6 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AppSidebar } from "@/components/AppSidebar";
+import { NotificationBadge } from "@/components/NotificationBadge";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import LoginPage from "@/pages/LoginPage";
 import SignupPage from "@/pages/SignupPage";
@@ -69,7 +70,10 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col flex-1">
           <header className="flex items-center justify-between p-2 border-b">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <ThemeToggle />
+            <div className="flex items-center gap-2">
+              <NotificationBadge />
+              <ThemeToggle />
+            </div>
           </header>
           <main className="flex-1 overflow-hidden">
             {children}
