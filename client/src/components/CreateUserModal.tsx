@@ -56,7 +56,11 @@ export function CreateUserModal({ open, onOpenChange, onSubmit, managers = [] }:
   });
 
   const handleSubmit = (data: CreateUserFormData) => {
-    onSubmit(data);
+    const submitData = {
+      ...data,
+      managerId: data.managerId && data.managerId.trim() !== "" ? data.managerId : undefined,
+    };
+    onSubmit(submitData);
     form.reset();
     onOpenChange(false);
   };
