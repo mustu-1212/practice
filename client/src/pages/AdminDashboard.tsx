@@ -50,7 +50,10 @@ export default function AdminDashboard() {
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Failed to create user");
+        const errorMessage = Array.isArray(error.error)
+          ? error.error.map((e: any) => e.message).join(", ")
+          : error.error || "Failed to create user";
+        throw new Error(errorMessage);
       }
       return response.json();
     },

@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button";
 const createUserSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
   role: z.enum(["ADMIN", "MANAGER", "EMPLOYEE"]),
   managerId: z.string().optional(),
 });
@@ -48,6 +49,7 @@ export function CreateUserModal({ open, onOpenChange, onSubmit, managers = [] }:
     defaultValues: {
       name: "",
       email: "",
+      password: "",
       role: "EMPLOYEE",
       managerId: "",
     },
@@ -88,6 +90,19 @@ export function CreateUserModal({ open, onOpenChange, onSubmit, managers = [] }:
                   <FormLabel>Email</FormLabel>
                   <FormControl>
                     <Input type="email" placeholder="john@example.com" {...field} data-testid="input-email" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="Min. 6 characters" {...field} data-testid="input-password" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

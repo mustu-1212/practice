@@ -60,6 +60,8 @@ Preferred communication style: Simple, everyday language.
 **Database Schema:**
 - Companies table: stores company information and default currency
 - Users table: stores user credentials, roles, and company relationships
+- Expenses table: stores employee expense claims with status tracking
+- ApprovalHistory table: logs all approval/rejection actions on expenses
 - Manager-employee hierarchy through self-referential `managerId` field
 - UUID primary keys generated server-side
 - Email uniqueness constraint enforced at database level
@@ -85,6 +87,10 @@ Preferred communication style: Simple, everyday language.
   - Endpoint: `https://restcountries.com/v3.1/name/{country}`
   - Fallback: Defaults to USD if lookup fails
   - Used to auto-populate company default currency
+- ExchangeRate-API: Provides real-time currency conversion for expense management
+  - Endpoint: `https://api.exchangerate-api.com/v4/latest/{BASE_CURRENCY}`
+  - Used to convert employee expense amounts to company default currency
+  - Enables managers to review expenses in a standardized currency
 
 **Database Service:**
 - Neon Serverless PostgreSQL
