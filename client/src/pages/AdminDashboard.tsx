@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
-import { Building2, Plus, Users, UserCog, UserCheck } from "lucide-react";
+import { Building2, Plus, Users, UserCog, UserCheck, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatsCard } from "@/components/StatsCard";
 import { UserTable } from "@/components/UserTable";
 import { CreateUserModal } from "@/components/CreateUserModal";
+import { WorkflowList } from "@/components/WorkflowList";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -145,50 +147,76 @@ export default function AdminDashboard() {
       <div className="max-w-7xl mx-auto p-6 space-y-6">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-3xl font-semibold" data-testid="text-page-title">User Management</h1>
-            <p className="text-muted-foreground mt-1">Manage your team members and their roles</p>
+            <h1 className="text-3xl font-semibold" data-testid="text-page-title">Admin Dashboard</h1>
+            <p className="text-muted-foreground mt-1">Manage users and approval workflows</p>
           </div>
-          <Button onClick={() => setCreateModalOpen(true)} data-testid="button-add-user">
-            <Plus className="h-4 w-4 mr-2" />
-            Add User
-          </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatsCard title="Total Users" value={stats.total} icon={Users} />
-          <StatsCard title="Admins" value={stats.admins} icon={UserCog} />
-          <StatsCard title="Managers" value={stats.managers} icon={UserCheck} />
-          <StatsCard title="Employees" value={stats.employees} icon={Building2} />
-        </div>
+        <Tabs defaultValue="users" className="space-y-6">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="users" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              User Management
+            </TabsTrigger>
+            <TabsTrigger value="workflows" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Workflows
+            </TabsTrigger>
+          </TabsList>
 
-        <div>
-          <Input
-            placeholder="Search users by name or email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-md"
-            data-testid="input-search"
-          />
-        </div>
+          <TabsContent value="users" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-semibold">User Management</h2>
+                <p className="text-muted-foreground mt-1">Manage your team members and their roles</p>
+              </div>
+              <Button onClick={() => setCreateModalOpen(true)} data-testid="button-add-user">
+                <Plus className="h-4 w-4 mr-2" />
+                Add User
+              </Button>
+            </div>
 
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <p className="text-muted-foreground">Loading users...</p>
-          </div>
-        ) : (
-          <UserTable
-            users={filteredUsers}
-            onEdit={handleEditUser}
-            onDelete={handleDeleteUser}
-          />
-        )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatsCard title="Total Users" value={stats.total} icon={Users} />
+              <StatsCard title="Admins" value={stats.admins} icon={UserCog} />
+              <StatsCard title="Managers" value={stats.managers} icon={UserCheck} />
+              <StatsCard title="Employees" value={stats.employees} icon={Building2} />
+            </div>
 
-        <CreateUserModal
-          open={createModalOpen}
-          onOpenChange={setCreateModalOpen}
-          onSubmit={handleCreateUser}
-          managers={managers}
-        />
+            <div>
+              <Input
+                placeholder="Search users by name or email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="max-w-md"
+                data-testid="input-search"
+              />
+            </div>
+
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <p className="text-muted-foreground">Loading users...</p>
+              </div>
+            ) : (
+              <UserTable
+                users={filteredUsers}
+                onEdit={handleEditUser}
+                onDelete={handleDeleteUser}
+              />
+            )}
+
+            <CreateUserModal
+              open={createModalOpen}
+              onOpenChange={setCreateModalOpen}
+              onSubmit={handleCreateUser}
+              managers={managers}
+            />
+          </TabsContent>
+
+          <TabsContent value="workflows" className="space-y-6">
+            <WorkflowList />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
