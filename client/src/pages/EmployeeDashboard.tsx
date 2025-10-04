@@ -360,6 +360,7 @@ export default function EmployeeDashboard() {
                       <TableHead>Category</TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead>Amount</TableHead>
+                      <TableHead>Workflow</TableHead>
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -377,6 +378,15 @@ export default function EmployeeDashboard() {
                         </TableCell>
                         <TableCell data-testid={`text-amount-${expense.id}`}>
                           {expense.amount} {expense.currency}
+                        </TableCell>
+                        <TableCell data-testid={`text-workflow-${expense.id}`}>
+                          {expense.workflowId && expense.currentStepNumber ? (
+                            <Badge variant="outline">
+                              Step {expense.currentStepNumber}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">-</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           {getStatusBadge(expense.status)}

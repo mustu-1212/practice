@@ -25,6 +25,8 @@ interface TeamExpense {
   convertedAmount: number;
   convertedCurrency: string;
   employeeName: string;
+  workflowId: string | null;
+  currentStepNumber: number | null;
 }
 
 export default function ManagerDashboard() {
@@ -148,6 +150,7 @@ export default function ManagerDashboard() {
                       <TableHead>Description</TableHead>
                       <TableHead>Original Amount</TableHead>
                       <TableHead>Converted Amount</TableHead>
+                      <TableHead>Workflow Step</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -171,6 +174,15 @@ export default function ManagerDashboard() {
                         </TableCell>
                         <TableCell data-testid={`text-converted-${expense.id}`}>
                           ≈ {expense.convertedAmount.toFixed(2)} {expense.convertedCurrency}
+                        </TableCell>
+                        <TableCell data-testid={`text-workflow-${expense.id}`}>
+                          {expense.workflowId && expense.currentStepNumber ? (
+                            <Badge variant="outline">
+                              Step {expense.currentStepNumber}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">No workflow</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2">

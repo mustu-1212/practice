@@ -305,9 +305,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/expenses", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const expenseData = insertExpenseSchema.parse(req.body);
+      
+      const workflows = await storage.getWorkflowsByCompany(req.user!.companyId);
+      const sequentialWorkflow = workflows.find(w => w.ruleType === "SEQUENTIAL");
+      
       const expense = await storage.createExpense({
         ...expenseData,
         userId: req.user!.id,
+        workflowId: sequentialWorkflow?.id || null,
+        currentStepNumber: sequentialWorkflow ? 1 : null,
       } as any);
       res.json(expense);
     } catch (error) {
@@ -525,7 +531,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (workflow.companyId !== req.user!.companyId) {
         return res.status(403).json({ error: "Access denied" });
       }
-      console.log("Step request body:", JSON.stringify(req.body, null, 2));
       const stepData = insertWorkflowStepSchema.parse(req.body);
       const step = await storage.createWorkflowStep({
         ...stepData,
@@ -534,7 +539,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(step);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        console.error("Step validation error:", JSON.stringify(error.errors, null, 2));
         return res.status(400).json({ error: error.errors });
       }
       console.error("Create workflow step error:", error);
