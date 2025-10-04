@@ -251,6 +251,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: error.errors });
       }
       console.error("Create user error:", error);
+      
+      if ((error as any).code === '23505') {
+        return res.status(400).json({ error: "A user with this email already exists" });
+      }
+      
       res.status(500).json({ error: "Internal server error" });
     }
   });
@@ -438,9 +443,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const createWorkflowSchema = insertApprovalWorkflowSchema.omit({ companyId: true });
+
   app.post("/api/workflows", authenticateToken, requireAdmin, async (req: AuthRequest, res: Response) => {
     try {
-      const workflowData = insertApprovalWorkflowSchema.parse(req.body);
+      const workflowData = createWorkflowSchema.parse(req.body);
       const workflow = await storage.createWorkflow({
         ...workflowData,
         companyId: req.user!.companyId,
