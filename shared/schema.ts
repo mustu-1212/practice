@@ -91,6 +91,7 @@ export const insertApprovalWorkflowSchema = createInsertSchema(approvalWorkflows
 
 export const insertWorkflowStepSchema = createInsertSchema(workflowSteps).omit({
   id: true,
+  workflowId: true,
 }).refine(
   (data) => data.approverRole || data.approverUserId,
   { message: "Either approverRole or approverUserId must be specified" }

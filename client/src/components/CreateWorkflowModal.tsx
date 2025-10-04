@@ -100,7 +100,10 @@ export function CreateWorkflowModal({ open, onOpenChange }: CreateWorkflowModalP
                 Authorization: `Bearer ${token}`,
               },
             });
-            throw new Error(error.error || `Failed to create step ${step.stepNumber}`);
+            const errorMessage = Array.isArray(error.error) 
+              ? error.error.map((e: any) => e.message).join(', ')
+              : (error.error || `Failed to create step ${step.stepNumber}`);
+            throw new Error(errorMessage);
           }
         }
       } catch (stepError) {
