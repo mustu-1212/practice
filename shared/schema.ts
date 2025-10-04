@@ -78,7 +78,7 @@ export const insertExpenseSchema = createInsertSchema(expenses).omit({
   status: true,
   userId: true,
 }).extend({
-  date: z.coerce.date(),
+  date: z.string().pipe(z.coerce.date()),
 });
 
 export const insertApprovalHistorySchema = createInsertSchema(approvalHistory).omit({
