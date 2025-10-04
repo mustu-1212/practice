@@ -535,7 +535,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const step = await storage.createWorkflowStep({
         ...stepData,
         workflowId,
-      });
+      } as any);
       res.json(step);
     } catch (error) {
       if (error instanceof z.ZodError) {
