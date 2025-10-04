@@ -73,18 +73,38 @@ export function CreateWorkflowModal({ open, onOpenChange }: CreateWorkflowModalP
         },
         body: JSON.stringify(data.workflow),
       });
-      if (!workflowResponse.ok) throw new Error("Failed to create workflow");
+      
+      if (!workflowResponse.ok) {
+        const error = await workflowResponse.json();
+        throw new Error(error.error || "Failed to create workflow");
+      }
+      
       const workflow = await workflowResponse.json();
 
-      for (const step of data.steps) {
-        await fetch(`/api/workflows/${workflow.id}/steps`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(step),
-        });
+      try {
+        for (const step of data.steps) {
+          const stepResponse = await fetch(`/api/workflows/${workflow.id}/steps`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(step),
+          });
+
+          if (!stepResponse.ok) {
+            const error = await stepResponse.json();
+            await fetch(`/api/workflows/${workflow.id}`, {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            });
+            throw new Error(error.error || `Failed to create step ${step.stepNumber}`);
+          }
+        }
+      } catch (stepError) {
+        throw stepError;
       }
 
       return workflow;
