@@ -141,6 +141,17 @@ export function CreateWorkflowModal({ open, onOpenChange }: CreateWorkflowModalP
       return;
     }
 
+    for (const step of steps) {
+      if (!step.approverRole && !step.approverUserId) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: `Step ${step.stepNumber}: Please select either a role or a specific user`,
+        });
+        return;
+      }
+    }
+
     const ruleConfig: any = {};
 
     if (data.ruleType === "PERCENTAGE" && data.requiredPercentage) {
@@ -338,6 +349,8 @@ export function CreateWorkflowModal({ open, onOpenChange }: CreateWorkflowModalP
                               onValueChange={(value) => {
                                 if (value === "role") {
                                   updateStep(index, "approverRole", "MANAGER");
+                                } else {
+                                  updateStep(index, "approverUserId", "");
                                 }
                               }}
                             >

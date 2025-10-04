@@ -525,6 +525,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (workflow.companyId !== req.user!.companyId) {
         return res.status(403).json({ error: "Access denied" });
       }
+      console.log("Step request body:", JSON.stringify(req.body, null, 2));
       const stepData = insertWorkflowStepSchema.parse(req.body);
       const step = await storage.createWorkflowStep({
         ...stepData,
@@ -533,6 +534,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(step);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error("Step validation error:", JSON.stringify(error.errors, null, 2));
         return res.status(400).json({ error: error.errors });
       }
       console.error("Create workflow step error:", error);
