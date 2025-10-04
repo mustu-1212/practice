@@ -221,9 +221,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const createUserSchema = insertUserSchema.omit({ companyId: true });
+
   app.post("/api/users", authenticateToken, requireAdmin, async (req: AuthRequest, res: Response) => {
     try {
-      const userData = insertUserSchema.parse(req.body);
+      const userData = createUserSchema.parse(req.body);
       const passwordHash = await bcrypt.hash(userData.password, 10);
       
       const user = await storage.createUser({
