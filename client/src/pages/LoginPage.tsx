@@ -48,12 +48,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-pastel-gradient p-4">
+      <Card className="w-full max-w-md shadow-soft-lg rounded-2xl-soft card-hover">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <div className="rounded-md bg-primary/10 p-3">
-              <Building2 className="h-8 w-8 text-primary" />
+            <div className="rounded-2xl-soft gradient-orange-pink p-4">
+              <Building2 className="h-8 w-8 text-white" />
             </div>
           </div>
           <CardTitle className="text-2xl font-semibold">Welcome back</CardTitle>
@@ -88,7 +88,7 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" data-testid="button-login" disabled={isLoading}>
+              <Button type="submit" className="w-full btn-gradient" data-testid="button-login" disabled={isLoading}>
                 {isLoading ? "Logging in..." : "Log In"}
               </Button>
             </form>
