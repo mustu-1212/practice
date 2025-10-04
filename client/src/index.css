@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Montserrat:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -20,19 +22,19 @@
 
   --border: 240 6% 90%;
 
-  --card: 240 5% 96%;
+  --card: 0 0% 100%;
 
   --card-foreground: 240 10% 10%;
 
   --card-border: 240 6% 92%;
 
-  --sidebar: 240 5% 94%;
+  --sidebar: 0 0% 98%;
 
   --sidebar-foreground: 240 10% 10%;
 
   --sidebar-border: 240 6% 88%;
 
-  --sidebar-primary: 220 90% 56%;
+  --sidebar-primary: 25 95% 60%;
 
   --sidebar-primary-foreground: 0 0% 100%;
 
@@ -40,15 +42,15 @@
 
   --sidebar-accent-foreground: 240 10% 10%;
 
-  --sidebar-ring: 220 90% 56%;
+  --sidebar-ring: 25 95% 60%;
 
-  --popover: 240 5% 92%;
+  --popover: 0 0% 100%;
 
   --popover-foreground: 240 10% 10%;
 
   --popover-border: 240 6% 86%;
 
-  --primary: 220 90% 56%;
+  --primary: 25 95% 60%;
 
   --primary-foreground: 0 0% 100%;
 
@@ -60,26 +62,26 @@
 
   --muted-foreground: 240 5% 45%;
 
-  --accent: 240 8% 88%;
+  --accent: 280 70% 70%;
 
-  --accent-foreground: 240 10% 10%;
+  --accent-foreground: 0 0% 100%;
 
   --destructive: 0 84% 60%;
 
   --destructive-foreground: 0 0% 100%;
 
   --input: 240 6% 80%;
-  --ring: 220 90% 56%;
-  --chart-1: 220 90% 56%;
-  --chart-2: 260 75% 55%;
-  --chart-3: 142 76% 36%;
-  --chart-4: 38 92% 50%;
+  --ring: 25 95% 60%;
+  --chart-1: 25 95% 60%;
+  --chart-2: 340 75% 65%;
+  --chart-3: 280 70% 70%;
+  --chart-4: 200 80% 60%;
   --chart-5: 0 84% 60%;
 
-  --font-sans: Inter, system-ui, -apple-system, sans-serif;
+  --font-sans: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: Menlo, monospace;
-  --radius: .5rem; /* 8px */
+  --radius: .75rem;
   --shadow-2xs: 0px 1px 2px 0px hsl(240 6% 10% / 0.05);
   --shadow-xs: 0px 1px 3px 0px hsl(240 6% 10% / 0.08);
   --shadow-sm: 0px 2px 4px 0px hsl(240 6% 10% / 0.06), 0px 1px 2px -1px hsl(240 6% 10% / 0.04);
@@ -324,5 +326,105 @@
   .border.active-elevate-2:not(.no-active-interaction-elevate)::after,
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
     inset: -1px;
+  }
+
+  /* EduWell-style Gradient Utilities */
+  .gradient-orange-pink {
+    background: linear-gradient(135deg, hsl(25, 95%, 60%) 0%, hsl(340, 75%, 65%) 100%);
+  }
+
+  .gradient-pink-purple {
+    background: linear-gradient(135deg, hsl(340, 75%, 65%) 0%, hsl(280, 70%, 70%) 100%);
+  }
+
+  .gradient-orange-purple {
+    background: linear-gradient(135deg, hsl(25, 95%, 60%) 0%, hsl(340, 75%, 65%) 50%, hsl(280, 70%, 70%) 100%);
+  }
+
+  .gradient-soft-wave {
+    background: 
+      linear-gradient(135deg, 
+        hsl(25, 95%, 60%) 0%, 
+        hsl(340, 75%, 65%) 50%, 
+        hsl(280, 70%, 70%) 100%
+      );
+    border-radius: 0 0 50% 50% / 0 0 20px 20px;
+  }
+
+  /* Enhanced Card Hover Effects */
+  .card-hover {
+    transition: all 0.3s ease;
+  }
+
+  .card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px -6px rgba(0, 0, 0, 0.15), 0 6px 12px -3px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Soft Shadow Utilities */
+  .shadow-soft {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  }
+
+  .shadow-soft-lg {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  }
+
+  /* Gradient Button Styles */
+  .btn-gradient {
+    background: linear-gradient(135deg, hsl(25, 95%, 60%) 0%, hsl(340, 75%, 65%) 100%);
+    color: white;
+    border: none;
+    transition: all 0.3s ease;
+  }
+
+  .btn-gradient:hover {
+    background: linear-gradient(135deg, hsl(25, 95%, 65%) 0%, hsl(340, 75%, 70%) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
+  }
+
+  /* Pastel Background Sections */
+  .bg-pastel-gradient {
+    background: linear-gradient(180deg, 
+      hsl(25, 95%, 95%) 0%, 
+      hsl(340, 75%, 95%) 50%, 
+      hsl(280, 70%, 95%) 100%
+    );
+  }
+
+  .bg-wave-pattern {
+    position: relative;
+    background: linear-gradient(135deg, hsl(25, 95%, 60%) 0%, hsl(340, 75%, 65%) 50%, hsl(280, 70%, 70%) 100%);
+  }
+
+  .bg-wave-pattern::before {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 100px;
+    background: white;
+    border-radius: 50% 50% 0 0 / 50px 50px 0 0;
+  }
+
+  /* Typography Enhancements */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+  }
+
+  .font-montserrat {
+    font-family: 'Montserrat', sans-serif;
+  }
+
+  /* Smooth Rounded Corners */
+  .rounded-xl-soft {
+    border-radius: 1rem;
+  }
+
+  .rounded-2xl-soft {
+    border-radius: 1.5rem;
   }
 }
