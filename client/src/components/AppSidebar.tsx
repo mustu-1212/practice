@@ -1,7 +1,8 @@
-import { Building2, LayoutDashboard, Settings, Users } from "lucide-react";
+import { Building2, LayoutDashboard, LogOut, Settings, Users } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -10,6 +11,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useLocation } from "wouter";
+import { useAuth } from "@/lib/auth";
 
 const menuItems = [
   {
@@ -36,6 +38,7 @@ const menuItems = [
 
 export function AppSidebar() {
   const [location, setLocation] = useLocation();
+  const { logout } = useAuth();
 
   return (
     <Sidebar>
@@ -62,6 +65,16 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={logout} data-testid="button-logout">
+              <LogOut />
+              <span>Logout</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   );
 }
