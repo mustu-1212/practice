@@ -1,10 +1,11 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { ruleEngine } from "./ruleEngine";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import { insertUserSchema, insertExpenseSchema } from "@shared/schema";
+import { insertUserSchema, insertExpenseSchema, insertApprovalWorkflowSchema, insertWorkflowStepSchema } from "@shared/schema";
 
 if (!process.env.SESSION_SECRET) {
   throw new Error("SESSION_SECRET environment variable is required for JWT signing");
@@ -385,17 +386,177 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Cannot approve expenses outside your team" });
       }
 
-      const updatedExpense = await storage.updateExpenseStatus(id, status);
-      await storage.createApprovalHistory({
-        expenseId: id,
-        approverId: req.user!.id,
-        status,
-        comment: comment || null,
-      });
+      if (expense.workflowId) {
+        const decision = await ruleEngine.processApproval(expense, req.user!.id, status);
+        
+        if (decision.reason.includes("Unauthorized")) {
+          return res.status(403).json({ error: decision.reason });
+        }
 
-      res.json(updatedExpense);
+        await storage.createApprovalHistory({
+          expenseId: id,
+          approverId: req.user!.id,
+          status,
+          comment: comment || null,
+        });
+        
+        if (decision.completed) {
+          await storage.updateExpenseStatus(id, decision.approved ? "APPROVED" : "REJECTED");
+        } else if (decision.nextStepNumber) {
+          await storage.updateExpenseWorkflow(id, expense.workflowId, decision.nextStepNumber);
+        }
+
+        res.json({
+          expense: await storage.getExpense(id),
+          decision,
+        });
+      } else {
+        await storage.createApprovalHistory({
+          expenseId: id,
+          approverId: req.user!.id,
+          status,
+          comment: comment || null,
+        });
+
+        const updatedExpense = await storage.updateExpenseStatus(id, status);
+        res.json({ expense: updatedExpense });
+      }
     } catch (error) {
       console.error("Approve expense error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/workflows", authenticateToken, requireAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const workflows = await storage.getWorkflowsByCompany(req.user!.companyId);
+      res.json(workflows);
+    } catch (error) {
+      console.error("Get workflows error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/workflows", authenticateToken, requireAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const workflowData = insertApprovalWorkflowSchema.parse(req.body);
+      const workflow = await storage.createWorkflow({
+        ...workflowData,
+        companyId: req.user!.companyId,
+      });
+      res.json(workflow);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Create workflow error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/workflows/:id", authenticateToken, requireAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const workflow = await storage.getWorkflow(id);
+      if (!workflow) {
+        return res.status(404).json({ error: "Workflow not found" });
+      }
+      if (workflow.companyId !== req.user!.companyId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      res.json(workflow);
+    } catch (error) {
+      console.error("Get workflow error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/workflows/:id", authenticateToken, requireAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const workflow = await storage.getWorkflow(id);
+      if (!workflow) {
+        return res.status(404).json({ error: "Workflow not found" });
+      }
+      if (workflow.companyId !== req.user!.companyId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      const updatedWorkflow = await storage.updateWorkflow(id, req.body);
+      res.json(updatedWorkflow);
+    } catch (error) {
+      console.error("Update workflow error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/workflows/:id", authenticateToken, requireAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const workflow = await storage.getWorkflow(id);
+      if (!workflow) {
+        return res.status(404).json({ error: "Workflow not found" });
+      }
+      if (workflow.companyId !== req.user!.companyId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      await storage.deleteWorkflow(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete workflow error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/workflows/:workflowId/steps", authenticateToken, requireAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { workflowId } = req.params;
+      const workflow = await storage.getWorkflow(workflowId);
+      if (!workflow) {
+        return res.status(404).json({ error: "Workflow not found" });
+      }
+      if (workflow.companyId !== req.user!.companyId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      const stepData = insertWorkflowStepSchema.parse(req.body);
+      const step = await storage.createWorkflowStep({
+        ...stepData,
+        workflowId,
+      });
+      res.json(step);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Create workflow step error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/workflows/:workflowId/steps", authenticateToken, requireAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { workflowId } = req.params;
+      const workflow = await storage.getWorkflow(workflowId);
+      if (!workflow) {
+        return res.status(404).json({ error: "Workflow not found" });
+      }
+      if (workflow.companyId !== req.user!.companyId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      const steps = await storage.getWorkflowSteps(workflowId);
+      res.json(steps);
+    } catch (error) {
+      console.error("Get workflow steps error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/workflows/steps/:stepId", authenticateToken, requireAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { stepId } = req.params;
+      await storage.deleteWorkflowStep(stepId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete workflow step error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
