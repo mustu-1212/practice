@@ -1,6 +1,6 @@
-import { type User, type Company, type InsertUser, type InsertCompany, type Expense, type InsertExpense, type ApprovalHistory, type InsertApprovalHistory, users, companies, expenses, approvalHistory } from "@shared/schema";
+import { type User, type Company, type InsertUser, type InsertCompany, type Expense, type InsertExpense, type ApprovalHistory, type InsertApprovalHistory, type ApprovalWorkflow, type InsertApprovalWorkflow, type WorkflowStep, type InsertWorkflowStep, users, companies, expenses, approvalHistory, approvalWorkflows, workflowSteps } from "@shared/schema";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, asc } from "drizzle-orm";
 
 export interface IStorage {
   // Company methods
@@ -27,6 +27,21 @@ export interface IStorage {
   // Approval history methods
   createApprovalHistory(approval: InsertApprovalHistory): Promise<ApprovalHistory>;
   getApprovalHistoryByExpense(expenseId: string): Promise<ApprovalHistory[]>;
+
+  // Approval workflow methods
+  createWorkflow(workflow: InsertApprovalWorkflow): Promise<ApprovalWorkflow>;
+  getWorkflow(id: string): Promise<ApprovalWorkflow | undefined>;
+  getWorkflowsByCompany(companyId: string): Promise<ApprovalWorkflow[]>;
+  updateWorkflow(id: string, data: Partial<Omit<ApprovalWorkflow, 'id' | 'companyId' | 'createdAt'>>): Promise<ApprovalWorkflow | undefined>;
+  deleteWorkflow(id: string): Promise<boolean>;
+  
+  // Workflow step methods
+  createWorkflowStep(step: InsertWorkflowStep): Promise<WorkflowStep>;
+  getWorkflowSteps(workflowId: string): Promise<WorkflowStep[]>;
+  deleteWorkflowStep(id: string): Promise<boolean>;
+  
+  // Expense workflow methods
+  updateExpenseWorkflow(expenseId: string, workflowId: string | null, currentStepNumber: number | null): Promise<Expense | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -128,6 +143,52 @@ export class DatabaseStorage implements IStorage {
 
   async getApprovalHistoryByExpense(expenseId: string): Promise<ApprovalHistory[]> {
     return await db.select().from(approvalHistory).where(eq(approvalHistory.expenseId, expenseId));
+  }
+
+  // Approval workflow methods
+  async createWorkflow(workflow: InsertApprovalWorkflow): Promise<ApprovalWorkflow> {
+    const [newWorkflow] = await db.insert(approvalWorkflows).values(workflow as any).returning();
+    return newWorkflow;
+  }
+
+  async getWorkflow(id: string): Promise<ApprovalWorkflow | undefined> {
+    const [workflow] = await db.select().from(approvalWorkflows).where(eq(approvalWorkflows.id, id));
+    return workflow;
+  }
+
+  async getWorkflowsByCompany(companyId: string): Promise<ApprovalWorkflow[]> {
+    return await db.select().from(approvalWorkflows).where(eq(approvalWorkflows.companyId, companyId));
+  }
+
+  async updateWorkflow(id: string, data: Partial<Omit<ApprovalWorkflow, 'id' | 'companyId' | 'createdAt'>>): Promise<ApprovalWorkflow | undefined> {
+    const [updatedWorkflow] = await db.update(approvalWorkflows).set(data).where(eq(approvalWorkflows.id, id)).returning();
+    return updatedWorkflow;
+  }
+
+  async deleteWorkflow(id: string): Promise<boolean> {
+    const result = await db.delete(approvalWorkflows).where(eq(approvalWorkflows.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // Workflow step methods
+  async createWorkflowStep(step: InsertWorkflowStep): Promise<WorkflowStep> {
+    const [newStep] = await db.insert(workflowSteps).values(step as any).returning();
+    return newStep;
+  }
+
+  async getWorkflowSteps(workflowId: string): Promise<WorkflowStep[]> {
+    return await db.select().from(workflowSteps).where(eq(workflowSteps.workflowId, workflowId)).orderBy(asc(workflowSteps.stepNumber));
+  }
+
+  async deleteWorkflowStep(id: string): Promise<boolean> {
+    const result = await db.delete(workflowSteps).where(eq(workflowSteps.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // Expense workflow methods
+  async updateExpenseWorkflow(expenseId: string, workflowId: string | null, currentStepNumber: number | null): Promise<Expense | undefined> {
+    const [updatedExpense] = await db.update(expenses).set({ workflowId, currentStepNumber }).where(eq(expenses.id, expenseId)).returning();
+    return updatedExpense;
   }
 }
 
