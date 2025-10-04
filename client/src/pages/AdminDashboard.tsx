@@ -1,30 +1,111 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Building2, Plus, Users, UserCog, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatsCard } from "@/components/StatsCard";
 import { UserTable } from "@/components/UserTable";
 import { CreateUserModal } from "@/components/CreateUserModal";
+import { useAuth } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-//todo: remove mock functionality
-const mockUsers = [
-  { id: "1", name: "John Smith", email: "john@company.com", role: "ADMIN" as const, managerName: undefined },
-  { id: "2", name: "Sarah Johnson", email: "sarah@company.com", role: "MANAGER" as const, managerName: "John Smith" },
-  { id: "3", name: "Mike Davis", email: "mike@company.com", role: "EMPLOYEE" as const, managerName: "Sarah Johnson" },
-  { id: "4", name: "Emily Brown", email: "emily@company.com", role: "EMPLOYEE" as const, managerName: "Sarah Johnson" },
-];
-
-const mockManagers = [
-  { id: "1", name: "John Smith" },
-  { id: "2", name: "Sarah Johnson" },
-];
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: "ADMIN" | "MANAGER" | "EMPLOYEE";
+  managerId: string | null;
+}
 
 export default function AdminDashboard() {
-  const [users, setUsers] = useState(mockUsers);
+  const { token } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
-  const filteredUsers = users.filter(user =>
+  const { data: users = [], isLoading } = useQuery<User[]>({
+    queryKey: ["/api/users"],
+    queryFn: async () => {
+      const response = await fetch("/api/users", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) throw new Error("Failed to fetch users");
+      return response.json();
+    },
+    enabled: !!token,
+  });
+
+  const createUserMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await fetch("/api/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create user");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({
+        title: "Success",
+        description: "User created successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await fetch(`/api/users/${userId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) throw new Error("Failed to delete user");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({
+        title: "Success",
+        description: "User deleted successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    },
+  });
+
+  const usersWithManagerNames = users.map(user => {
+    const manager = users.find(u => u.id === user.managerId);
+    return {
+      ...user,
+      managerName: manager?.name,
+    };
+  });
+
+  const filteredUsers = usersWithManagerNames.filter(user =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -36,25 +117,24 @@ export default function AdminDashboard() {
     employees: users.filter(u => u.role === "EMPLOYEE").length,
   };
 
+  const managers = users
+    .filter(u => u.role === "ADMIN" || u.role === "MANAGER")
+    .map(u => ({ id: u.id, name: u.name }));
+
   const handleCreateUser = (data: any) => {
-    console.log("Creating user:", data);
-    const newUser = {
-      id: String(users.length + 1),
-      name: data.name,
-      email: data.email,
-      role: data.role,
-      managerName: data.managerId ? mockManagers.find(m => m.id === data.managerId)?.name : undefined,
-    };
-    setUsers([...users, newUser]);
+    createUserMutation.mutate(data);
+    setCreateModalOpen(false);
   };
 
   const handleEditUser = (user: any) => {
-    console.log("Edit user:", user);
+    toast({
+      title: "Edit functionality",
+      description: "Edit user feature coming soon",
+    });
   };
 
   const handleDeleteUser = (userId: string) => {
-    console.log("Delete user:", userId);
-    setUsers(users.filter(u => u.id !== userId));
+    deleteUserMutation.mutate(userId);
   };
 
   return (
@@ -88,17 +168,23 @@ export default function AdminDashboard() {
           />
         </div>
 
-        <UserTable
-          users={filteredUsers}
-          onEdit={handleEditUser}
-          onDelete={handleDeleteUser}
-        />
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <p className="text-muted-foreground">Loading users...</p>
+          </div>
+        ) : (
+          <UserTable
+            users={filteredUsers}
+            onEdit={handleEditUser}
+            onDelete={handleDeleteUser}
+          />
+        )}
 
         <CreateUserModal
           open={createModalOpen}
           onOpenChange={setCreateModalOpen}
           onSubmit={handleCreateUser}
-          managers={mockManagers}
+          managers={managers}
         />
       </div>
     </div>

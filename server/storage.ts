@@ -6,6 +6,7 @@ export interface IStorage {
   // Company methods
   createCompany(company: InsertCompany): Promise<Company>;
   getCompany(id: string): Promise<Company | undefined>;
+  deleteCompany(id: string): Promise<boolean>;
 
   // User methods
   getUser(id: string): Promise<User | undefined>;
@@ -26,6 +27,11 @@ export class DatabaseStorage implements IStorage {
   async getCompany(id: string): Promise<Company | undefined> {
     const [company] = await db.select().from(companies).where(eq(companies.id, id));
     return company;
+  }
+
+  async deleteCompany(id: string): Promise<boolean> {
+    const result = await db.delete(companies).where(eq(companies.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   // User methods

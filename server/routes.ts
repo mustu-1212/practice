@@ -6,7 +6,10 @@ import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { insertUserSchema } from "@shared/schema";
 
-const JWT_SECRET = process.env.SESSION_SECRET || "your-secret-key";
+if (!process.env.SESSION_SECRET) {
+  throw new Error("SESSION_SECRET environment variable is required for JWT signing");
+}
+const JWT_SECRET = process.env.SESSION_SECRET;
 
 interface AuthRequest extends Request {
   user?: {
@@ -75,21 +78,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const currency = await fetchCurrencyByCountry(country);
-      
-      const company = await storage.createCompany({
-        name: companyName,
-        defaultCurrency: currency,
-      });
-
       const passwordHash = await bcrypt.hash(password, 10);
-      const user = await storage.createUser({
-        name: adminName,
-        email,
-        passwordHash,
-        role: "ADMIN",
-        companyId: company.id,
-        managerId: null,
-      });
+      
+      let company, user;
+      try {
+        company = await storage.createCompany({
+          name: companyName,
+          defaultCurrency: currency,
+        });
+
+        user = await storage.createUser({
+          name: adminName,
+          email,
+          passwordHash,
+          role: "ADMIN",
+          companyId: company.id,
+          managerId: null,
+        });
+      } catch (dbError) {
+        if (company) {
+          await storage.deleteCompany(company.id).catch((err: Error) => 
+            console.error("Failed to cleanup orphaned company:", err)
+          );
+        }
+        throw dbError;
+      }
 
       const token = jwt.sign(
         { id: user.id, email: user.email, role: user.role, companyId: user.companyId },

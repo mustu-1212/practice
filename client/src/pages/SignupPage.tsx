@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Building2 } from "lucide-react";
 import { useLocation } from "wouter";
+import { useAuth } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
 
 const signupSchema = z.object({
   companyName: z.string().min(2, "Company name must be at least 2 characters"),
@@ -21,6 +23,10 @@ type SignupFormData = z.infer<typeof signupSchema>;
 
 export default function SignupPage() {
   const [, setLocation] = useLocation();
+  const { signup } = useAuth();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  
   const form = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
@@ -32,9 +38,19 @@ export default function SignupPage() {
     },
   });
 
-  const onSubmit = (data: SignupFormData) => {
-    console.log("Signup attempt:", data);
-    setLocation("/admin");
+  const onSubmit = async (data: SignupFormData) => {
+    setIsLoading(true);
+    try {
+      await signup(data);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Signup failed",
+        description: error instanceof Error ? error.message : "Failed to create account",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -118,8 +134,8 @@ export default function SignupPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" data-testid="button-create-company">
-                Create Company
+              <Button type="submit" className="w-full" data-testid="button-create-company" disabled={isLoading}>
+                {isLoading ? "Creating..." : "Create Company"}
               </Button>
             </form>
           </Form>

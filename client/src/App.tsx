@@ -7,10 +7,29 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AppSidebar } from "@/components/AppSidebar";
+import { AuthProvider, useAuth } from "@/lib/auth";
 import LoginPage from "@/pages/LoginPage";
 import SignupPage from "@/pages/SignupPage";
 import AdminDashboard from "@/pages/AdminDashboard";
 import NotFound from "@/pages/not-found";
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Redirect to="/login" />;
+  }
+
+  return <>{children}</>;
+}
 
 function AdminLayout({ children }: { children: React.ReactNode }) {
   const style = {
@@ -42,28 +61,36 @@ function Router() {
       <Route path="/login" component={LoginPage} />
       <Route path="/signup" component={SignupPage} />
       <Route path="/admin">
-        <AdminLayout>
-          <AdminDashboard />
-        </AdminLayout>
+        <ProtectedRoute>
+          <AdminLayout>
+            <AdminDashboard />
+          </AdminLayout>
+        </ProtectedRoute>
       </Route>
       <Route path="/admin/users">
-        <AdminLayout>
-          <AdminDashboard />
-        </AdminLayout>
+        <ProtectedRoute>
+          <AdminLayout>
+            <AdminDashboard />
+          </AdminLayout>
+        </ProtectedRoute>
       </Route>
       <Route path="/admin/company">
-        <AdminLayout>
-          <div className="flex items-center justify-center h-full">
-            <p className="text-muted-foreground">Company settings page</p>
-          </div>
-        </AdminLayout>
+        <ProtectedRoute>
+          <AdminLayout>
+            <div className="flex items-center justify-center h-full">
+              <p className="text-muted-foreground">Company settings page</p>
+            </div>
+          </AdminLayout>
+        </ProtectedRoute>
       </Route>
       <Route path="/admin/settings">
-        <AdminLayout>
-          <div className="flex items-center justify-center h-full">
-            <p className="text-muted-foreground">Settings page</p>
-          </div>
-        </AdminLayout>
+        <ProtectedRoute>
+          <AdminLayout>
+            <div className="flex items-center justify-center h-full">
+              <p className="text-muted-foreground">Settings page</p>
+            </div>
+          </AdminLayout>
+        </ProtectedRoute>
       </Route>
       <Route component={NotFound} />
     </Switch>
@@ -73,12 +100,14 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
-      </ThemeProvider>
+      <AuthProvider>
+        <ThemeProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </ThemeProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

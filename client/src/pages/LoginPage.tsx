@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Building2 } from "lucide-react";
 import { useLocation } from "wouter";
+import { useAuth } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -18,6 +20,10 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const [, setLocation] = useLocation();
+  const { login } = useAuth();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -26,9 +32,19 @@ export default function LoginPage() {
     },
   });
 
-  const onSubmit = (data: LoginFormData) => {
-    console.log("Login attempt:", data);
-    setLocation("/admin");
+  const onSubmit = async (data: LoginFormData) => {
+    setIsLoading(true);
+    try {
+      await login(data.email, data.password);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Login failed",
+        description: error instanceof Error ? error.message : "Invalid credentials",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -72,8 +88,8 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" data-testid="button-login">
-                Log In
+              <Button type="submit" className="w-full" data-testid="button-login" disabled={isLoading}>
+                {isLoading ? "Logging in..." : "Log In"}
               </Button>
             </form>
           </Form>
