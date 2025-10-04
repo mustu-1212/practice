@@ -68,8 +68,8 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1">
-          <header className="flex items-center justify-between p-2 border-b">
-            <SidebarTrigger data-testid="button-sidebar-toggle" />
+          <header className="flex items-center justify-between p-4 gradient-orange-purple shadow-soft">
+            <SidebarTrigger data-testid="button-sidebar-toggle" className="text-white hover:bg-white/20" />
             <div className="flex items-center gap-2">
               <NotificationBadge />
               <ThemeToggle />
