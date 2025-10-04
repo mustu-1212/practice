@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import { insertUserSchema } from "@shared/schema";
+import { insertUserSchema, insertExpenseSchema } from "@shared/schema";
 
 if (!process.env.SESSION_SECRET) {
   throw new Error("SESSION_SECRET environment variable is required for JWT signing");
@@ -34,6 +34,23 @@ async function fetchCurrencyByCountry(country: string): Promise<string> {
   } catch (error) {
     console.error("Error fetching currency:", error);
     return "USD";
+  }
+}
+
+async function convertCurrency(amount: string, fromCurrency: string, toCurrency: string): Promise<number> {
+  try {
+    if (fromCurrency === toCurrency) {
+      return parseFloat(amount);
+    }
+    const response = await fetch(`https://api.exchangerate-api.com/v4/latest/${fromCurrency}`);
+    if (!response.ok) throw new Error("Currency conversion failed");
+    const data = await response.json();
+    const rate = data.rates[toCurrency];
+    if (!rate) throw new Error(`No rate found for ${toCurrency}`);
+    return parseFloat(amount) * rate;
+  } catch (error) {
+    console.error("Error converting currency:", error);
+    return parseFloat(amount);
   }
 }
 
@@ -272,6 +289,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error) {
       console.error("Delete user error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/expenses", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const expenseData = insertExpenseSchema.parse(req.body);
+      const expense = await storage.createExpense({
+        ...expenseData,
+        userId: req.user!.id,
+      } as any);
+      res.json(expense);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Create expense error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/expenses/my", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const expenses = await storage.getExpensesByUser(req.user!.id);
+      res.json(expenses);
+    } catch (error) {
+      console.error("Get expenses error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/expenses/team", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      if (req.user!.role !== "MANAGER" && req.user!.role !== "ADMIN") {
+        return res.status(403).json({ error: "Manager access required" });
+      }
+
+      const expenses = await storage.getExpensesByManager(req.user!.id);
+      const company = await storage.getCompany(req.user!.companyId);
+      const companyCurrency = company?.defaultCurrency || "USD";
+
+      const expensesWithConversion = await Promise.all(
+        expenses.map(async (expense) => {
+          const convertedAmount = await convertCurrency(
+            expense.amount,
+            expense.currency,
+            companyCurrency
+          );
+          const user = await storage.getUser(expense.userId);
+          return {
+            ...expense,
+            convertedAmount,
+            convertedCurrency: companyCurrency,
+            employeeName: user?.name || "Unknown",
+          };
+        })
+      );
+
+      res.json(expensesWithConversion);
+    } catch (error) {
+      console.error("Get team expenses error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/expenses/:id/approve", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      if (req.user!.role !== "MANAGER" && req.user!.role !== "ADMIN") {
+        return res.status(403).json({ error: "Manager access required" });
+      }
+
+      const { id } = req.params;
+      const { status, comment } = req.body;
+
+      if (!status || !["APPROVED", "REJECTED"].includes(status)) {
+        return res.status(400).json({ error: "Valid status required (APPROVED or REJECTED)" });
+      }
+
+      if (status === "REJECTED" && !comment) {
+        return res.status(400).json({ error: "Comment required for rejection" });
+      }
+
+      const expense = await storage.getExpense(id);
+      if (!expense) {
+        return res.status(404).json({ error: "Expense not found" });
+      }
+
+      const teamMembers = await storage.getUsersByManager(req.user!.id);
+      const isTeamExpense = teamMembers.some(member => member.id === expense.userId);
+
+      if (!isTeamExpense && req.user!.role !== "ADMIN") {
+        return res.status(403).json({ error: "Cannot approve expenses outside your team" });
+      }
+
+      const updatedExpense = await storage.updateExpenseStatus(id, status);
+      await storage.createApprovalHistory({
+        expenseId: id,
+        approverId: req.user!.id,
+        status,
+        comment: comment || null,
+      });
+
+      res.json(updatedExpense);
+    } catch (error) {
+      console.error("Approve expense error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

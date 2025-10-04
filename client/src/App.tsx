@@ -11,6 +11,8 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import LoginPage from "@/pages/LoginPage";
 import SignupPage from "@/pages/SignupPage";
 import AdminDashboard from "@/pages/AdminDashboard";
+import EmployeeDashboard from "@/pages/EmployeeDashboard";
+import ManagerDashboard from "@/pages/ManagerDashboard";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -29,6 +31,30 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   return <>{children}</>;
+}
+
+function RoleBasedRedirect() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Redirect to="/login" />;
+  }
+
+  if (user.role === "ADMIN") {
+    return <Redirect to="/admin" />;
+  } else if (user.role === "MANAGER") {
+    return <Redirect to="/manager" />;
+  } else {
+    return <Redirect to="/employee" />;
+  }
 }
 
 function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -57,7 +83,7 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={() => <Redirect to="/login" />} />
+      <Route path="/" component={RoleBasedRedirect} />
       <Route path="/login" component={LoginPage} />
       <Route path="/signup" component={SignupPage} />
       <Route path="/admin">
@@ -89,6 +115,20 @@ function Router() {
             <div className="flex items-center justify-center h-full">
               <p className="text-muted-foreground">Settings page</p>
             </div>
+          </AdminLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/employee">
+        <ProtectedRoute>
+          <AdminLayout>
+            <EmployeeDashboard />
+          </AdminLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/manager">
+        <ProtectedRoute>
+          <AdminLayout>
+            <ManagerDashboard />
           </AdminLayout>
         </ProtectedRoute>
       </Route>

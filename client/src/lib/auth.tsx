@@ -83,7 +83,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(data.token);
     setUser(data.user);
     localStorage.setItem("token", data.token);
-    setLocation("/admin");
+    
+    if (data.user.role === "ADMIN") {
+      setLocation("/admin");
+    } else if (data.user.role === "MANAGER") {
+      setLocation("/manager");
+    } else {
+      setLocation("/employee");
+    }
   };
 
   const signup = async (signupData: SignupData) => {
