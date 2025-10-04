@@ -5,6 +5,7 @@ import { ruleEngine } from "./ruleEngine";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
+import multer from "multer";
 import { insertUserSchema, insertExpenseSchema, insertApprovalWorkflowSchema, insertWorkflowStepSchema } from "@shared/schema";
 
 if (!process.env.SESSION_SECRET) {
@@ -561,6 +562,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      if (file.mimetype.startsWith('image/')) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only image files are allowed'));
+      }
+    }
+  });
+
+  app.post("/api/ocr/receipt", authenticateToken, upload.single('receipt'), async (req: AuthRequest, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No image file provided" });
+      }
+
+      const OCR_API_KEY = process.env.OCR_SPACE_API_KEY || 'K87899142388957';
+
+      const formData = new FormData();
+      const blob = new Blob([req.file.buffer], { type: req.file.mimetype });
+      formData.append('file', blob, req.file.originalname);
+      formData.append('apikey', OCR_API_KEY);
+      formData.append('isTable', 'true');
+      formData.append('OCREngine', '2');
+
+      const response = await fetch('https://api.ocr.space/parse/image', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`OCR API error: ${response.statusText}`);
+      }
+
+      const ocrResult = await response.json();
+      
+      if (ocrResult.IsErroredOnProcessing) {
+        throw new Error(ocrResult.ErrorMessage?.[0] || 'OCR processing failed');
+      }
+
+      const extractedText = ocrResult.ParsedResults?.[0]?.ParsedText || '';
+      
+      const parsedData = parseReceiptText(extractedText);
+
+      res.json({
+        success: true,
+        rawText: extractedText,
+        parsed: parsedData,
+      });
+    } catch (error) {
+      console.error("OCR error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to process receipt" 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
+}
+
+function parseReceiptText(text: string): {
+  merchantName?: string;
+  amount?: string;
+  date?: string;
+} {
+  const lines = text.split('\n').filter(line => line.trim());
+  
+  const merchantName = lines[0]?.trim() || undefined;
+  
+  const amountPattern = /(?:total|amount|sum)[:\s]*[$€£]?\s*(\d+[.,]\d{2})/i;
+  const amountMatch = text.match(amountPattern);
+  const amount = amountMatch ? amountMatch[1].replace(',', '.') : undefined;
+  
+  const datePattern = /(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/;
+  const dateMatch = text.match(datePattern);
+  let date = dateMatch ? dateMatch[1] : undefined;
+  
+  if (date) {
+    const parts = date.split(/[\/\-\.]/);
+    if (parts.length === 3) {
+      const [day, month, year] = parts;
+      const fullYear = year.length === 2 ? `20${year}` : year;
+      date = `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+  }
+
+  return {
+    merchantName,
+    amount,
+    date,
+  };
 }
