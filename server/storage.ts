@@ -22,6 +22,7 @@ export interface IStorage {
   getExpense(id: string): Promise<Expense | undefined>;
   getExpensesByUser(userId: string): Promise<Expense[]>;
   getExpensesByManager(managerId: string): Promise<Expense[]>;
+  getExpensesByCompany(companyId: string): Promise<Expense[]>;
   updateExpenseStatus(id: string, status: "PENDING" | "APPROVED" | "REJECTED"): Promise<Expense | undefined>;
 
   // Approval history methods
@@ -128,6 +129,18 @@ export class DatabaseStorage implements IStorage {
 
     const allExpenses = await db.select().from(expenses);
     return allExpenses.filter(e => teamMemberIds.includes(e.userId));
+  }
+
+  async getExpensesByCompany(companyId: string): Promise<Expense[]> {
+    const companyUsers = await this.getUsersByCompany(companyId);
+    const userIds = companyUsers.map(u => u.id);
+    
+    if (userIds.length === 0) {
+      return [];
+    }
+
+    const allExpenses = await db.select().from(expenses);
+    return allExpenses.filter(e => userIds.includes(e.userId));
   }
 
   async updateExpenseStatus(id: string, status: "PENDING" | "APPROVED" | "REJECTED"): Promise<Expense | undefined> {

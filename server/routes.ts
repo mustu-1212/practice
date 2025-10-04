@@ -341,7 +341,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Manager access required" });
       }
 
-      const expenses = await storage.getExpensesByManager(req.user!.id);
+      const expenses = req.user!.role === "ADMIN" 
+        ? await storage.getExpensesByCompany(req.user!.companyId)
+        : await storage.getExpensesByManager(req.user!.id);
+      
       const company = await storage.getCompany(req.user!.companyId);
       const companyCurrency = company?.defaultCurrency || "USD";
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Building2, Plus, Users, UserCog, UserCheck, Settings } from "lucide-react";
+import { Building2, Plus, Users, UserCog, UserCheck, Settings, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatsCard } from "@/components/StatsCard";
@@ -7,9 +7,13 @@ import { UserTable } from "@/components/UserTable";
 import { CreateUserModal } from "@/components/CreateUserModal";
 import { WorkflowList } from "@/components/WorkflowList";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 
 interface User {
   id: string;
@@ -17,6 +21,21 @@ interface User {
   email: string;
   role: "ADMIN" | "MANAGER" | "EMPLOYEE";
   managerId: string | null;
+}
+
+interface TeamExpense {
+  id: string;
+  userId: string;
+  amount: string;
+  currency: string;
+  description: string;
+  date: string;
+  category: string;
+  status: string;
+  createdAt: string;
+  convertedAmount: number;
+  convertedCurrency: string;
+  employeeName: string;
 }
 
 export default function AdminDashboard() {
@@ -38,6 +57,10 @@ export default function AdminDashboard() {
       return response.json();
     },
     enabled: !!token,
+  });
+
+  const { data: expenses = [], isLoading: isLoadingExpenses } = useQuery<TeamExpense[]>({
+    queryKey: ["/api/expenses/team"],
   });
 
   const createUserMutation = useMutation({
@@ -153,10 +176,14 @@ export default function AdminDashboard() {
         </div>
 
         <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-2xl grid-cols-3">
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               User Management
+            </TabsTrigger>
+            <TabsTrigger value="expenses" className="flex items-center gap-2">
+              <Receipt className="h-4 w-4" />
+              Expenses
             </TabsTrigger>
             <TabsTrigger value="workflows" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
@@ -211,6 +238,68 @@ export default function AdminDashboard() {
               onSubmit={handleCreateUser}
               managers={managers}
             />
+          </TabsContent>
+
+          <TabsContent value="expenses" className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-semibold">All Company Expenses</h2>
+              <p className="text-muted-foreground mt-1">View all expense claims from across the company</p>
+            </div>
+
+            {isLoadingExpenses ? (
+              <div className="flex items-center justify-center py-12">
+                <p className="text-muted-foreground">Loading expenses...</p>
+              </div>
+            ) : expenses.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <Receipt className="h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">No expenses submitted yet</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>All Expenses</CardTitle>
+                  <CardDescription>View and track all expense claims</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Employee</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {expenses.map((expense) => (
+                        <TableRow key={expense.id}>
+                          <TableCell className="font-medium">{expense.employeeName}</TableCell>
+                          <TableCell>{expense.description}</TableCell>
+                          <TableCell>{expense.category || '-'}</TableCell>
+                          <TableCell>
+                            {expense.convertedCurrency} {expense.convertedAmount.toFixed(2)}
+                          </TableCell>
+                          <TableCell>{format(new Date(expense.date), "MMM dd, yyyy")}</TableCell>
+                          <TableCell>
+                            <Badge variant={
+                              expense.status === "APPROVED" ? "default" :
+                              expense.status === "REJECTED" ? "destructive" : "secondary"
+                            }>
+                              {expense.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="workflows" className="space-y-6">
