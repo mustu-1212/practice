@@ -88,7 +88,7 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full btn-gradient" data-testid="button-login" disabled={isLoading}>
+              <Button type="submit" variant="gradient" className="w-full" data-testid="button-login" disabled={isLoading}>
                 {isLoading ? "Logging in..." : "Log In"}
               </Button>
             </form>

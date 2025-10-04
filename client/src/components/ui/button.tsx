@@ -12,6 +12,8 @@ const buttonVariants = cva(
       variant: {
         default:
           "bg-primary text-primary-foreground border border-primary-border",
+        gradient:
+          "bg-gradient-to-br from-[hsl(25,95%,60%)] to-[hsl(340,75%,65%)] text-white border-none shadow-md hover:from-[hsl(25,95%,65%)] hover:to-[hsl(340,75%,70%)] hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:hover:translate-y-0",
         destructive:
           "bg-destructive text-destructive-foreground border border-destructive-border",
         outline:

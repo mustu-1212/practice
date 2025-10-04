@@ -134,7 +134,7 @@ export default function SignupPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full btn-gradient" data-testid="button-create-company" disabled={isLoading}>
+              <Button type="submit" variant="gradient" className="w-full" data-testid="button-create-company" disabled={isLoading}>
                 {isLoading ? "Creating..." : "Create Company"}
               </Button>
             </form>
